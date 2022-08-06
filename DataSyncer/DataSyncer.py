@@ -96,8 +96,12 @@ class DataSyncer:
 
         ax.legend(loc="upper left")
 
-    def saveSyncedData(self, path):  # TODO
-        pass
+    def saveSyncedData(self, filepath):
+        # save altered sync data
+        f = open(filepath, 'w+b')
+        binary_format = bytearray(self.sensor_df.to_numpy())
+        f.write(binary_format)
+        f.close()
 
 
 class DataSyncerTX(DataSyncer):
