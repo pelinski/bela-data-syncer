@@ -13,18 +13,17 @@ class DataSyncer:
         self.__num_sensors = num_sensors
 
         self.__sync_datatype = [("framesElapsed", "f4"), ("msg", "f4")]
-        get_sensor_datatype = lambda _id, _n: [
+        self.__sensor_datatype = [
             ("framesElapsed", "f4"),
-            *[("{}-x{}".format(_id, str(i)), "f4") for i in range(1, _n + 1)],
+            *[("{}-x{}".format(self.id, str(i)), "f4") for i in range(1, self.num_sensors + 1)],
         ]
-        self.__sensor_datatype = get_sensor_datatype(self.__id, self.__num_sensors)
 
         # load TX raw data from log files
         self.__sync_raw = self.__loadBinaryData(self.__sync_log_path, self.__sync_datatype)
         self.__sensor_raw = self.__loadBinaryData(self.__sensor_log_path, self.__sensor_datatype)
 
         # load into pandas dataframe for easier manipulation
-        self.__sync_df = pd.DataFrame(self.__sync_raw).astype(int)
+        self.__sync_df_raw = pd.DataFrame(self.__sync_raw).astype(int)
         self.__sensor_df = pd.DataFrame(self.__sensor_raw)
 
         self.__offsetSensorData()
@@ -50,8 +49,8 @@ class DataSyncer:
         return self.__sync_raw
 
     @property
-    def sync_df(self):
-        return self.__sync_df
+    def sync_df_raw(self):
+        return self.__sync_df_raw
 
     @property
     def sensor_df(self):
@@ -67,9 +66,12 @@ class DataSyncer:
         return _
 
     def __offsetSensorData(self):
-        self.__sensor_df = self.sensor_df.iloc[self.sync_df["framesElapsed"].iloc[0]:self.sync_df["framesElapsed"].
-                                               iloc[-1]].copy()
+        self.__sensor_df = self.sensor_df.iloc[self.sync_df_raw["framesElapsed"].iloc[0]:self.
+                                               sync_df_raw["framesElapsed"].iloc[-1]].copy()
         print("Offsetting {} sensor data...".format(self.id))
+
+    def saveSyncedData(self, path):  # TODO
+        pass
 
 
 class DataSyncerTX(DataSyncer):
@@ -102,6 +104,10 @@ class DataSyncerRX(DataSyncer):
     def synced_to_id(self):
         return self.__synced_to_id
 
+    @synced_to_id.setter  # needs a setter in order to update the synced_to_id after sync
+    def synced_to_id(self, value):
+        self.__synced_to_id = value
+
     def syncSensorData(self, TX_Syncer):
 
         print("Syncing {} sensor data against {}...".format(self.id, TX_Syncer.id))
@@ -109,9 +115,9 @@ class DataSyncerRX(DataSyncer):
         sensor_df_aux = self.sensor_df.copy()
 
         # check if messages are received at the same interval
-        for i in range(len(self.sync_df) - 1):  # iterate over received blocks
+        for i in range(len(self.sync_df_raw) - 1):  # iterate over received blocks
 
-            diff = (self.sync_df['framesElapsed'][i + 1] - self.sync_df['framesElapsed'][i]) - TX_Syncer.d_clock
+            diff = (self.sync_df_raw['framesElapsed'][i + 1] - self.sync_df_raw['framesElapsed'][i]) - TX_Syncer.d_clock
 
             if diff == 0:  # if spacing between received blocks equals d_clock, everything is fine
                 continue
@@ -125,20 +131,18 @@ class DataSyncerRX(DataSyncer):
                         continue
 
                 for j in range(diff):  # remove n extra samples
-                    sensor_df_aux = sensor_df_aux.drop(index=(
-                        sensor_df_aux.loc[self.sensor_df['framesElapsed'] == self.sync_df['framesElapsed'][i +
-                                                                                                           1]].index -
-                        j)[0])
+                    sensor_df_aux = sensor_df_aux.drop(index=(sensor_df_aux.loc[
+                        self.sensor_df['framesElapsed'] == self.sync_df_raw['framesElapsed'][i + 1]].index - j)[0])
 
                 # check if number of samples is corrected
-                #print(sensor_df_aux.loc[dfRx['framesElapsed'] == self.sync_df['framesElapsed'][i+1]].index- sensor_df_aux.loc[dfRx['framesElapsed'] == self.sync_df['framesElapsed'][i]].index)
+                #print(sensor_df_aux.loc[dfRx['framesElapsed'] == self.sync_df_raw['framesElapsed'][i+1]].index- sensor_df_aux.loc[dfRx['framesElapsed'] == self.sync_df_raw['framesElapsed'][i]].index)
 
             if diff < 0:
 
-                # interpolation
+                # linear interpolation
 
-                t2 = self.sync_df['framesElapsed'][i + 1] + 1  # end of current +1
-                t1 = self.sync_df['framesElapsed'][i + 1]  # end of current
+                t2 = self.sync_df_raw['framesElapsed'][i + 1] + 1  # end of current +1
+                t1 = self.sync_df_raw['framesElapsed'][i + 1]  # end of current
                 x2 = sensor_df_aux.loc[t2, [
                     sensor_datatype[0] for sensor_datatype in self._DataSyncer__sensor_datatype[1:self.num_sensors + 1]
                 ]].values  # get sensor values at t2
@@ -148,13 +152,14 @@ class DataSyncerRX(DataSyncer):
 
                 m = (x2 - x1) / (t2 - t1)  # point-slope equation -> y = m(x-x0) + y0
 
-                dfTop = sensor_df_aux.loc[:t1 + 1].copy()
+                sensor_df_aux_top = sensor_df_aux.loc[:t1 + 1].copy()
                 for i in range(1, abs(diff) + 1):
                     t = np.round(t1 + i * (t2 - t1) / (abs(diff) + 1), 7)
                     x = np.round(m * (t - t1) + x1, 7)
-                    dfTop.loc[t1 + i] = [t, *x]  # now index is not equal to t anymore and t is irrelevant
+                    sensor_df_aux_top.loc[t1 + i] = [t, *x]  # now index is not equal to t anymore and t is irrelevant
 
-                sensor_df_aux = pd.concat([dfTop, sensor_df_aux.loc[t2:]])  # concatenate dfTop and sensor_df_aux
+                sensor_df_aux = pd.concat([sensor_df_aux_top,
+                                           sensor_df_aux.loc[t2:]])  # concatenate sensor_df_aux_top and sensor_df_aux
 
         self.sensor_df = sensor_df_aux.drop('framesElapsed', axis=1).reset_index(drop=True)
-        self.__synced_to_id = TX_Syncer.id
+        self.synced_to_id = TX_Syncer.id
