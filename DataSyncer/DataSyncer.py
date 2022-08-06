@@ -1,6 +1,7 @@
-from contextlib import nullcontext
+from curses import use_default_colors
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class DataSyncer:
@@ -45,6 +46,10 @@ class DataSyncer:
         return self.__num_sensors
 
     @property
+    def sensor_raw(self):
+        return self.__sensor_raw
+
+    @property
     def sync_raw(self):
         return self.__sync_raw
 
@@ -69,6 +74,28 @@ class DataSyncer:
         self.__sensor_df = self.sensor_df.iloc[self.sync_df_raw["framesElapsed"].iloc[0]:self.
                                                sync_df_raw["framesElapsed"].iloc[-1]].copy()
         print("Offsetting {} sensor data...".format(self.id))
+
+    def plotSensorRaw(self):
+        _, ax = plt.subplots()
+
+        framesElapsed = [e[0] for e in self.sensor_raw]
+
+        for j in range(1, self.num_sensors + 1):
+            ax.plot(framesElapsed, [e[j] for e in self.sensor_raw], label="{}-x{}".format(self.id, str(j)))
+
+        ax.set_title("Raw {} Sensor Data".format(self.id))
+        ax.set_xlabel("Frames Elapsed")
+
+        ax.legend(loc="upper left")
+
+    def plotSensor(self):
+        _, ax = plt.subplots()
+
+        self.sensor_df.plot(y=[c for c in self.sensor_df.columns if c != "framesElapsed"], ax=ax, use_index=True)
+        ax.set_title("Synced {} Sensor Data".format(self.id))
+        ax.set_xlabel("Frames Elapsed")
+
+        ax.legend(loc="upper left")
 
     def saveSyncedData(self, path):  # TODO
         pass
