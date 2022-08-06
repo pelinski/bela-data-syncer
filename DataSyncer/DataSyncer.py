@@ -127,12 +127,11 @@ class DataSyncerRX(DataSyncer):
                     if diff == 0:  # if difference is equal to n blocks, continue
                         continue
 
-                for j in range(diff):  # remove n extra samples
+                for j in reversed(range(diff)):  # remove n extra samples
                     sensor_df_aux = sensor_df_aux.drop(index=(sensor_df_aux.loc[
                         self.sensor_df['framesElapsed'] == self.sync_df_raw['framesElapsed'][i + 1]].index - j)[0])
 
-                # check if number of samples is corrected
-                #print(sensor_df_aux.loc[dfRx['framesElapsed'] == self.sync_df_raw['framesElapsed'][i+1]].index- sensor_df_aux.loc[dfRx['framesElapsed'] == self.sync_df_raw['framesElapsed'][i]].index)
+                print("Dropped {} extra samples from {} sensor data".format(diff, self.id))
 
             if diff < 0:
 
@@ -157,6 +156,8 @@ class DataSyncerRX(DataSyncer):
 
                 sensor_df_aux = pd.concat([sensor_df_aux_top,
                                            sensor_df_aux.loc[t2:]])  # concatenate sensor_df_aux_top and sensor_df_aux
+
+                print("Added {} extra samples to {} sensor data".format(abs(diff), self.id))
 
         self.sensor_df = sensor_df_aux.drop('framesElapsed', axis=1).reset_index(drop=True)
         self.synced_to_id = TX_Syncer.id
