@@ -10,7 +10,6 @@ pandas = "*"
 matplotlib = "*"
 
 [dev-packages]
-autopep8 = "*"
 yapf = "*"
 
 [requires]

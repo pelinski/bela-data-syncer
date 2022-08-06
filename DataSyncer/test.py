@@ -1,3 +1,5 @@
+# DataSyncer testing
+
 import unittest
 import numpy as np
 
@@ -11,8 +13,8 @@ class checkTX(unittest.TestCase):
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = DataSyncerTX(
             id="TX0",
-            sync_log_path="DataSyncer/test-data/TX0-sync.log",
-            sensor_log_path="DataSyncer/test-data/TX0-data.log",
+            sync_log_path="DataSyncer/data/TX0-sync.log",
+            sensor_log_path="DataSyncer/data/TX0-data.log",
             num_sensors=3,
             d_clock=689 * 8 + 8,
         )
@@ -37,21 +39,22 @@ class checkRX(unittest.TestCase):
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = DataSyncerTX(
             id="TX0",
-            sync_log_path="DataSyncer/test-data/TX0-sync.log",
-            sensor_log_path="DataSyncer/test-data/TX0-data.log",
+            sync_log_path="DataSyncer/data/TX0-sync.log",
+            sensor_log_path="DataSyncer/data/TX0-data.log",
             num_sensors=4,
             d_clock=689 * 8 + 8,
         )
 
         # load sync and sensor data from Bela receivers (RX)
         dataSyncerRX1 = DataSyncerRX(id="RX1",
-                                     sync_log_path="DataSyncer/test-data/RX1-sync.log",
-                                     sensor_log_path="DataSyncer/test-data/RX1-data.log",
+                                     sync_log_path="DataSyncer/data/RX1-sync.log",
+                                     sensor_log_path="DataSyncer/data/RX1-data.log",
                                      num_sensors=4)
-        dataSyncerRX2 = DataSyncerRX(id="RX2",
-                                     sync_log_path="DataSyncer/test-data/RX2-sync.log",
-                                     sensor_log_path="DataSyncer/test-data/RX2-data.log",
-                                     num_sensors=4)
+        dataSyncerRX2 = DataSyncerRX(
+            id="RX2",
+            sync_log_path="DataSyncer/data/RX2-sync-int.log",  # load tweaked data for interpolation testing
+            sensor_log_path="DataSyncer/data/RX2-data.log",
+            num_sensors=4)
 
         # sync sensor data from RXs to TX
         dataSyncerRX1.syncSensorData(dataSyncerTX)
@@ -66,8 +69,14 @@ class checkRX(unittest.TestCase):
             len(dataSyncerRX2.sensor_df) == len(dataSyncerTX.sensor_df), True,
             "RX2 sensor data length is not equal to TX sensor data length.")
 
+        self.assertEqual(
+            len(dataSyncerRX1.sensor_df) % dataSyncerTX.d_clock == 0, True,
+            "RX1 sensor data length is not a multiple of d_clock.")
 
-# TODO add tests for interpolation
+        self.assertEqual(
+            len(dataSyncerRX2.sensor_df) % dataSyncerTX.d_clock == 0, True,
+            "RX2 sensor data length is not a multiple of d_clock.")
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
