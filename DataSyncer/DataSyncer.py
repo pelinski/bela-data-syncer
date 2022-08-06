@@ -88,9 +88,6 @@ class DataSyncerTX(DataSyncer):
     def d_clock(self):
         return self.__d_clock
 
-    def saveCorrectedTxData(self, path):
-        pass  # save as numpy array binary file
-
 
 class DataSyncerRX(DataSyncer):
 
