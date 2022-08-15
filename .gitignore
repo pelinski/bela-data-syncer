@@ -1,3 +1,14 @@
-data/
+dev/
+# python
+__pycache__/
+
+# jupyter notebook
 .ipynb_checkpoints/
-*.log
+
+# python package
+build/
+dist/
+bela_data_syncer.egg-info/
+
+# dev
+.vscode/

@@ -10,6 +10,15 @@ pandas = "*"
 matplotlib = "*"
 
 [dev-packages]
+yapf = "*"
+bela-data-syncer = {editable = true, path = "."}
 
 [requires]
 python_version = "3.9"
+
+[pipenv]
+allow_prereleases = true
+
+[scripts]
+build = "python setup.py develop"
+test = "sh ./test/test.sh"
