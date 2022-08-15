@@ -3,9 +3,9 @@ name: Tests
 
 on:
   push:
-    branches: [master, dev]
+    branches: [main, dev]
   pull_request:
-    branches: [master, dev]
+    branches: [main, dev]
 
 jobs:
   installation:
@@ -16,7 +16,7 @@ jobs:
         python: ["3.9", "3.10"]
 
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python }}
@@ -32,7 +32,7 @@ jobs:
         python: ["3.9", "3.10"]
 
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python }}
@@ -48,7 +48,7 @@ jobs:
       - name: Install python dependencies
         run: pipenv install -d --python ${{ matrix.python }}
 
-      - name: Build CPP
+      - name: Run setup.py
         run: pipenv run build
 
       - name: Run unit tests

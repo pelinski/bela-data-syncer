@@ -8,6 +8,7 @@ jupyter = "*"
 ipykernel = "*"
 pandas = "*"
 matplotlib = "*"
+numpy = "*"
 
 [dev-packages]
 yapf = "*"
