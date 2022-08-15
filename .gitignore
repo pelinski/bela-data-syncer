@@ -11,5 +11,4 @@ dist/
 bela_data_syncer.egg-info/
 
 # dev
-*.log
 .vscode/
