@@ -78,6 +78,8 @@ class checkRX(unittest.TestCase):
             "RX2 sensor data length is not a multiple of d_clock.")
 
 
+#TODO test error case in which there are more than half of the block missing values in the sensor data
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
     exit()

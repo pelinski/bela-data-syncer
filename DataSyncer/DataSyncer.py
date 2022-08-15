@@ -1,33 +1,40 @@
+# DataSyncer, DataSyncerTX and DataSyncerRX classes
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 
 class DataSyncer:
-    # loads sync and sensor data files into pandas dataframes. common methods for TX and RX
-    def __init__(self, id, sync_log_path, sensor_log_path, num_sensors):
+    # DataSyncer class, parent class for DataSyncerTX and DataSyncerRX
 
-        self.__id = id
-        self.__sync_log_path = sync_log_path
-        self.__sensor_log_path = sensor_log_path
-        self.__num_sensors = num_sensors
+    def __init__(self, id, sync_log_path, sensor_log_path, num_sensors, verbose=True):
 
-        self.__sync_datatype = [("framesElapsed", "f4"), ("msg", "f4")]
+        self.__id = id  # Bela id. TX0 for transmitter/master and RX0, RX1, ... for receivers/slaves
+        self.__sync_log_path = sync_log_path  # path to sync log file
+        self.__sensor_log_path = sensor_log_path  # path to sensor log file
+        self.__num_sensors = num_sensors  # number of sensors connected to the Bela analog ports
+        self.__verbose = verbose  # print info messages
+
+        self.__sync_datatype = [("framesElapsed", "f4"),
+                                ("msg", "f4")]  # datatype for sync data (necessary for loading binary files)
         self.__sensor_datatype = [
             ("framesElapsed", "f4"),
             *[("{}-x{}".format(self.id, str(i)), "f4") for i in range(1, self.num_sensors + 1)],
-        ]
+        ]  # datatype for sensor data (necessary for loading binary files)
 
-        # load TX raw data from log files
+        # Load TX raw data from log files
         self.__sync_raw = self.__loadBinaryData(self.__sync_log_path, self.__sync_datatype)
         self.__sensor_raw = self.__loadBinaryData(self.__sensor_log_path, self.__sensor_datatype)
 
-        # load into pandas dataframe for easier manipulation
+        # Load the raw data into pandas dataframes for easier manipulation
         self.__sync_df_raw = pd.DataFrame(self.__sync_raw).astype(int)
         self.__sensor_df = pd.DataFrame(self.__sensor_raw)
 
+        # Remove sensor data recorded before the first and after the last sync message
         self.__offsetSensorData()
 
+    # Property getters
     @property
     def id(self):
         return self.__id
@@ -60,24 +67,38 @@ class DataSyncer:
     def sensor_df(self):
         return self.__sensor_df
 
+    @property
+    def verbose(self):
+        return self.__verbose
+
+    # Property setters
     @sensor_df.setter  # needs a setter in order to update the sensor_df after sync
     def sensor_df(self, value):
         self.__sensor_df = value
 
+    @verbose.setter
+    def verbose(self, value):
+        self.__verbose = value
+
     def __loadBinaryData(self, path, dtype):
+        # Load binary data from log file, given data type
+        if self.__verbose: print('Loading "{}"...'.format(path))
+
         _ = np.fromfile(path, dtype=dtype)
-        print('Loading "{}"...'.format(path))
+
         return _
 
     def __offsetSensorData(self):
+        # Remove sensor data recorded before the first and after the last sync message
         self.__sensor_df = self.sensor_df.iloc[self.sync_df_raw["framesElapsed"].iloc[0]:self.
                                                sync_df_raw["framesElapsed"].iloc[-1]].copy()
-        print("Offsetting {} sensor data...".format(self.id))
+        if self.__verbose: print("Offsetting {} sensor data...".format(self.id))
 
     def plotSensorRaw(self):
+        # Plot each sensor raw signal over framesElapsed
         _, ax = plt.subplots()
 
-        framesElapsed = [e[0] for e in self.sensor_raw]
+        framesElapsed = [e[0] for e in self.sensor_raw]  # framesElapsed is the first item of each row
 
         for j in range(1, self.num_sensors + 1):
             ax.plot(framesElapsed, [e[j] for e in self.sensor_raw], label="{}-x{}".format(self.id, str(j)))
@@ -88,6 +109,7 @@ class DataSyncer:
         ax.legend(loc="upper left")
 
     def plotSensor(self):
+        # Plot each sensor processed signal over framesElapsed
         _, ax = plt.subplots()
 
         self.sensor_df.plot(y=[c for c in self.sensor_df.columns if c != "framesElapsed"], ax=ax, use_index=True)
@@ -97,7 +119,7 @@ class DataSyncer:
         ax.legend(loc="upper left")
 
     def saveSyncedData(self, filepath):
-        # save altered sync data
+        # Save synced sensor data to binary file
         f = open(filepath, 'w+b')
         binary_format = bytearray(self.sensor_df.to_numpy())
         f.write(binary_format)
@@ -105,6 +127,7 @@ class DataSyncer:
 
 
 class DataSyncerTX(DataSyncer):
+    # DataSyncerTX, class for transmitter/master Bela
 
     def __init__(self, id, sync_log_path, sensor_log_path, num_sensors, d_clock=689 * 8 + 8):
 
@@ -112,63 +135,80 @@ class DataSyncerTX(DataSyncer):
 
         self.__d_clock = d_clock  # interval in frames at which the TX sends a clock signal
 
+        # framesElapsed is dropped from the processed sensor data since after interpolation/dropping in the RX signals there appear decimal or missing framesElapsed values, so the raw/recorded framesElapsed value is dropped and the row index is used instead
         self.sensor_df = self.sensor_df.drop('framesElapsed', axis=1).reset_index(drop=True)
 
+    # Property getters
     @property
     def d_clock(self):
         return self.__d_clock
 
 
 class DataSyncerRX(DataSyncer):
+    # DataSyncerRX, class for receiver/slave Bela
 
     def __init__(self, id, sync_log_path, sensor_log_path, num_sensors):
 
         super(DataSyncerRX, self).__init__(id, sync_log_path, sensor_log_path, num_sensors)
 
-        self.__synced_to_id = False
+        self.__synced_to_id = False  # whether the receiver has been synced to a transmitter, False or takes string value of transmitter id
 
+    # Property getters
     @property
     def synced_to_id(self):
         return self.__synced_to_id
 
+    # Property setters
     @synced_to_id.setter  # needs a setter in order to update the synced_to_id after sync
     def synced_to_id(self, value):
         self.__synced_to_id = value
 
     def syncSensorData(self, TX_Syncer):
+        # Syncs sensor data to a transmitter's (TX_Syncer) clock signal. This means (1) the frames index in the RX and in the TX are equivalent, so (2) between each clock signal, a constant number of frames (d_clock) have elapsed, and hence (3) if there are frames missing in the RX between two clock signals, the signal values are interpolated or (4) if there are extra frames in the RX between two clock signals, those extra frames are dropped.
 
-        print("Syncing {} sensor data against {}...".format(self.id, TX_Syncer.id))
+        if self.__verbose: print("Syncing {} sensor data against {}...".format(self.id, TX_Syncer.id))
 
+        # To keep the reference frames index, we do the interpolation/dropping on sensor_df_aux and then copy the values back to sensor_df
         sensor_df_aux = self.sensor_df.copy()
 
-        # check if messages are received at the same interval
-        for i in range(len(self.sync_df_raw) - 1):  # iterate over received blocks
+        # Iterate over each block of frames between clock signals
+        for i in range(len(self.sync_df_raw) - 1):  # i refers to the raw data
 
+            # Number of frames elapsed between two clock signals
             diff = (self.sync_df_raw['framesElapsed'][i + 1] - self.sync_df_raw['framesElapsed'][i]) - TX_Syncer.d_clock
 
-            if diff == 0:  # if spacing between received blocks equals d_clock, everything is fine
+            # If diff==0, the number of frames elapsed between two clock signals is equal to the TX's d_clock, so no interpolation/dropping is needed
+            if diff == 0:
                 continue
 
-            if diff > 0:  # remove extra samples . if larger than one block, check if twice the block +-2 samples
+            # If diff>0, there are extra frames in the RX between two clock signals, so we need to drop those extra frames
+            if diff > 0:
 
-                if diff > TX_Syncer.d_clock:  # if diff larger than d_clock, normalise difference
+                # Check if the number of frames of extra frames is larger than d_clock. If this is the case, the RX might have missed a clock signal, but as long as the next clock signal is received in a multiple of d_clock frames, there's no need for interpolation/dropping.
+                if diff > TX_Syncer.d_clock:
+                    # 'Unwrap' the difference to the nearest multiple of d_clock
                     m = np.floor(diff / TX_Syncer.d_clock)
                     diff = diff - m * TX_Syncer.d_clock
-                    if diff == 0:  # if difference is equal to n blocks, continue
+                    if diff == 0:  # If the unwrapped difference is equal to 0, the number of frames elapsed is a multiple of d_clock and no interpolation/dropping is needed. Otherwise, continue to drop the extra frames
                         continue
 
-                for j in reversed(range(diff)):  # remove n extra samples
+                # TODO case in which extraframes are more than half of d_clock --> throw error
+
+                # Drop extra frames
+                for j in reversed(range(diff)):
                     sensor_df_aux = sensor_df_aux.drop(index=(sensor_df_aux.loc[
                         self.sensor_df['framesElapsed'] == self.sync_df_raw['framesElapsed'][i + 1]].index - j)[0])
 
-                print("Dropped {} extra samples from {} sensor data".format(diff, self.id))
+                if self.__verbose: print("Dropped {} extra samples from {} sensor data".format(diff, self.id))
 
+            # If diff<0, there are frames missing in the RX between two clock signals, so we need to interpolate those missing frames
             if diff < 0:
 
-                # linear interpolation
+                #TODO if more than half of the block is missing, throw error
 
-                t2 = self.sync_df_raw['framesElapsed'][i + 1] + 1  # end of current +1
-                t1 = self.sync_df_raw['framesElapsed'][i + 1]  # end of current
+                # Linear interpolation
+                t2 = self.sync_df_raw['framesElapsed'][i + 1] + 1  # end of current block +1
+                t1 = self.sync_df_raw['framesElapsed'][i + 1]  # end of current block
                 x2 = sensor_df_aux.loc[t2, [
                     sensor_datatype[0] for sensor_datatype in self._DataSyncer__sensor_datatype[1:self.num_sensors + 1]
                 ]].values  # get sensor values at t2
@@ -176,18 +216,27 @@ class DataSyncerRX(DataSyncer):
                     sensor_datatype[0] for sensor_datatype in self._DataSyncer__sensor_datatype[1:self.num_sensors + 1]
                 ]].values  # get sensor values at t1
 
-                m = (x2 - x1) / (t2 - t1)  # point-slope equation -> y = m(x-x0) + y0
+                m = (x2 - x1) / (t2 - t1)  # slope of linear interpolation
 
+                # Copy the values of the dataframe up until t1 (before the interpolated values)
                 sensor_df_aux_top = sensor_df_aux.loc[:t1 + 1].copy()
-                for i in range(1, abs(diff) + 1):
-                    t = np.round(t1 + i * (t2 - t1) / (abs(diff) + 1), 7)
-                    x = np.round(m * (t - t1) + x1, 7)
-                    sensor_df_aux_top.loc[t1 + i] = [t, *x]  # now index is not equal to t anymore and t is irrelevant
 
+                # Add interpolated values to the end of sensor_df_aux_top
+                for i in range(1, abs(diff) + 1):
+                    t = np.round(
+                        t1 + i * (t2 - t1) / (abs(diff) + 1), 7
+                    )  # those t (or frameElapsed in the dataframe) values are now decimal and hence do not correspond to the frameElapsed index anymore
+                    x = np.round(m * (t - t1) + x1, 7)
+                    sensor_df_aux_top.loc[t1 + i] = [t, *x]
+
+                # Merges sensor_df_aux_top (sensor values up until t2, the end of the interpolation) with the rest of the dataframe (sensor data values after t2)
                 sensor_df_aux = pd.concat([sensor_df_aux_top,
                                            sensor_df_aux.loc[t2:]])  # concatenate sensor_df_aux_top and sensor_df_aux
 
-                print("Added {} extra samples to {} sensor data".format(abs(diff), self.id))
+                if self.__verbose: print("Added {} extra samples to {} sensor data".format(abs(diff), self.id))
 
+        # framesElapsed is dropped from the processed sensor data since after interpolation/dropping in the RX signals there appear decimal or missing framesElapsed values, so the raw/recorded framesElapsed value is dropped and the row index is used instead
         self.sensor_df = sensor_df_aux.drop('framesElapsed', axis=1).reset_index(drop=True)
+
+        # Value of synced_to_id is updated with the transmitter (TX_Syncer) id
         self.synced_to_id = TX_Syncer.id

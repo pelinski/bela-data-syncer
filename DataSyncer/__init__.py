@@ -1,3 +1,3 @@
-from .DataSyncer import DataSyncerTX
+from .DataSyncer import DataSyncerTX, DataSyncerRX
 
-__all__ = ["DataSyncerTX"]
+__all__ = ["DataSyncerTX", "DataSyncerRX"]
