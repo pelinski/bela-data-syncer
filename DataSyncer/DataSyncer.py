@@ -82,7 +82,7 @@ class DataSyncer:
 
     def __loadBinaryData(self, path, dtype):
         # Load binary data from log file, given data type
-        if self.__verbose: print('Loading "{}"...'.format(path))
+        if self.verbose: print('Loading "{}"...'.format(path))
 
         _ = np.fromfile(path, dtype=dtype)
 
@@ -92,7 +92,7 @@ class DataSyncer:
         # Remove sensor data recorded before the first and after the last sync message
         self.__sensor_df = self.sensor_df.iloc[self.sync_df_raw["framesElapsed"].iloc[0]:self.
                                                sync_df_raw["framesElapsed"].iloc[-1]].copy()
-        if self.__verbose: print("Offsetting {} sensor data...".format(self.id))
+        if self.verbose: print("Offsetting {} sensor data...".format(self.id))
 
     def plotSensorRaw(self):
         # Plot each sensor raw signal over framesElapsed
@@ -129,9 +129,9 @@ class DataSyncer:
 class DataSyncerTX(DataSyncer):
     # DataSyncerTX, class for transmitter/master Bela
 
-    def __init__(self, id, sync_log_path, sensor_log_path, num_sensors, d_clock=689 * 8 + 8):
+    def __init__(self, id, sync_log_path, sensor_log_path, num_sensors, d_clock=689 * 8 + 8, verbose=True):
 
-        super(DataSyncerTX, self).__init__(id, sync_log_path, sensor_log_path, num_sensors)
+        super(DataSyncerTX, self).__init__(id, sync_log_path, sensor_log_path, num_sensors, verbose)
 
         self.__d_clock = d_clock  # interval in frames at which the TX sends a clock signal
 
@@ -147,9 +147,9 @@ class DataSyncerTX(DataSyncer):
 class DataSyncerRX(DataSyncer):
     # DataSyncerRX, class for receiver/slave Bela
 
-    def __init__(self, id, sync_log_path, sensor_log_path, num_sensors):
+    def __init__(self, id, sync_log_path, sensor_log_path, num_sensors, verbose=True):
 
-        super(DataSyncerRX, self).__init__(id, sync_log_path, sensor_log_path, num_sensors)
+        super(DataSyncerRX, self).__init__(id, sync_log_path, sensor_log_path, num_sensors, verbose)
 
         self.__synced_to_id = False  # whether the receiver has been synced to a transmitter, False or takes string value of transmitter id
 
@@ -166,7 +166,7 @@ class DataSyncerRX(DataSyncer):
     def syncSensorData(self, TX_Syncer):
         # Syncs sensor data to a transmitter's (TX_Syncer) clock signal. This means (1) the frames index in the RX and in the TX are equivalent, so (2) between each clock signal, a constant number of frames (d_clock) have elapsed, and hence (3) if there are frames missing in the RX between two clock signals, the signal values are interpolated or (4) if there are extra frames in the RX between two clock signals, those extra frames are dropped.
 
-        if self.__verbose: print("Syncing {} sensor data against {}...".format(self.id, TX_Syncer.id))
+        if self.verbose: print("Syncing {} sensor data against {}...".format(self.id, TX_Syncer.id))
 
         # To keep the reference frames index, we do the interpolation/dropping on sensor_df_aux and then copy the values back to sensor_df
         sensor_df_aux = self.sensor_df.copy()
@@ -199,7 +199,7 @@ class DataSyncerRX(DataSyncer):
                     sensor_df_aux = sensor_df_aux.drop(index=(sensor_df_aux.loc[
                         self.sensor_df['framesElapsed'] == self.sync_df_raw['framesElapsed'][i + 1]].index - j)[0])
 
-                if self.__verbose: print("Dropped {} extra samples from {} sensor data".format(diff, self.id))
+                if self.verbose: print("Dropped {} extra samples from {} sensor data".format(diff, self.id))
 
             # If diff<0, there are frames missing in the RX between two clock signals, so we need to interpolate those missing frames
             if diff < 0:
@@ -233,7 +233,7 @@ class DataSyncerRX(DataSyncer):
                 sensor_df_aux = pd.concat([sensor_df_aux_top,
                                            sensor_df_aux.loc[t2:]])  # concatenate sensor_df_aux_top and sensor_df_aux
 
-                if self.__verbose: print("Added {} extra samples to {} sensor data".format(abs(diff), self.id))
+                if self.verbose: print("Added {} extra samples to {} sensor data".format(abs(diff), self.id))
 
         # framesElapsed is dropped from the processed sensor data since after interpolation/dropping in the RX signals there appear decimal or missing framesElapsed values, so the raw/recorded framesElapsed value is dropped and the row index is used instead
         self.sensor_df = sensor_df_aux.drop('framesElapsed', axis=1).reset_index(drop=True)

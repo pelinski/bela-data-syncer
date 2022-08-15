@@ -13,8 +13,8 @@ class checkTX(unittest.TestCase):
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = DataSyncerTX(
             id="TX0",
-            sync_log_path="DataSyncer/data/TX0-sync.log",
-            sensor_log_path="DataSyncer/data/TX0-data.log",
+            sync_log_path="test/data/TX0-sync.log",
+            sensor_log_path="test/data/TX0-data.log",
             num_sensors=3,
             d_clock=689 * 8 + 8,
         )
@@ -39,21 +39,21 @@ class checkRX(unittest.TestCase):
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = DataSyncerTX(
             id="TX0",
-            sync_log_path="DataSyncer/data/TX0-sync.log",
-            sensor_log_path="DataSyncer/data/TX0-data.log",
+            sync_log_path="test/data/TX0-sync.log",
+            sensor_log_path="test/data/TX0-data.log",
             num_sensors=4,
             d_clock=689 * 8 + 8,
         )
 
         # load sync and sensor data from Bela receivers (RX)
         dataSyncerRX1 = DataSyncerRX(id="RX1",
-                                     sync_log_path="DataSyncer/data/RX1-sync.log",
-                                     sensor_log_path="DataSyncer/data/RX1-data.log",
+                                     sync_log_path="test/data/RX1-sync.log",
+                                     sensor_log_path="test/data/RX1-data.log",
                                      num_sensors=4)
         dataSyncerRX2 = DataSyncerRX(
             id="RX2",
-            sync_log_path="DataSyncer/data/RX2-sync-int.log",  # load tweaked data for interpolation testing
-            sensor_log_path="DataSyncer/data/RX2-data.log",
+            sync_log_path="test/data/RX2-sync-int.log",  # load tweaked data for interpolation testing
+            sensor_log_path="test/data/RX2-data.log",
             num_sensors=4)
 
         # sync sensor data from RXs to TX
