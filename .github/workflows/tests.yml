@@ -48,7 +48,7 @@ jobs:
       - name: Install python dependencies
         run: pipenv install -d --python ${{ matrix.python }}
 
-      - name: Build CPP
+      - name: Run setup.py
         run: pipenv run build
 
       - name: Run unit tests
