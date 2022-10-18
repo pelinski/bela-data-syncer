@@ -21,5 +21,6 @@ python_version = "3.9"
 allow_prereleases = true
 
 [scripts]
+path = "pipenv --venv"
 build = "python setup.py develop"
 test = "sh ./test/test.sh"
