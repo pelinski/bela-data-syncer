@@ -18,14 +18,15 @@ class DataSyncer:
 
         self.__sync_datatype = [("framesElapsed", "f4"),
                                 ("msg", "f4")]  # datatype for sync data (necessary for loading binary files)
-        self.__sensor_datatype = [
+        
+        self.__sensor_raw_datatype = [
             ("framesElapsed", "f4"),
             *[("{}-x{}".format(self.id, str(i)), "f4") for i in range(1, self.num_sensors + 1)],
         ]  # datatype for sensor data (necessary for loading binary files)
 
         # Load TX raw data from log files
         self.__sync_raw = self.__loadBinaryData(self.__sync_log_path, self.__sync_datatype)
-        self.__sensor_raw = self.__loadBinaryData(self.__sensor_log_path, self.__sensor_datatype)
+        self.__sensor_raw = self.__loadBinaryData(self.__sensor_log_path, self.__sensor_raw_datatype)
 
         # Load the raw data into pandas dataframes for easier manipulation
         self.__sync_df_raw = pd.DataFrame(self.__sync_raw).astype(int)
@@ -66,6 +67,10 @@ class DataSyncer:
     @property
     def sensor_df(self):
         return self.__sensor_df
+
+    @property
+    def sensor_np(self):
+        return self.__sensor_df.to_numpy()
 
     @property
     def verbose(self):
@@ -121,7 +126,7 @@ class DataSyncer:
     def saveSyncedData(self, filepath):
         # Save synced sensor data to binary file
         f = open(filepath, 'w+b')
-        binary_format = bytearray(self.sensor_df.to_numpy())
+        binary_format = bytearray(self.sensor_np)
         f.write(binary_format)
         f.close()
 
@@ -210,10 +215,10 @@ class DataSyncerRX(DataSyncer):
                 t2 = self.sync_df_raw['framesElapsed'][i + 1] + 1  # end of current block +1
                 t1 = self.sync_df_raw['framesElapsed'][i + 1]  # end of current block
                 x2 = sensor_df_aux.loc[t2, [
-                    sensor_datatype[0] for sensor_datatype in self._DataSyncer__sensor_datatype[1:self.num_sensors + 1]
+                    sensor_datatype[0] for sensor_datatype in self._DataSyncer__sensor_raw_datatype[1:self.num_sensors + 1]
                 ]].values  # get sensor values at t2
                 x1 = sensor_df_aux.loc[t2, [
-                    sensor_datatype[0] for sensor_datatype in self._DataSyncer__sensor_datatype[1:self.num_sensors + 1]
+                    sensor_datatype[0] for sensor_datatype in self._DataSyncer__sensor_raw_datatype[1:self.num_sensors + 1]
                 ]].values  # get sensor values at t1
 
                 m = (x2 - x1) / (t2 - t1)  # slope of linear interpolation

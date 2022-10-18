@@ -1,9 +1,10 @@
 # DataSyncer testing
 
 import unittest
+import os
 import numpy as np
 
-from DataSyncer import DataSyncerTX, DataSyncerRX
+from DataSyncer import DataSyncerTX, DataSyncerRX, SyncedDataLoader
 
 
 class checkTX(unittest.TestCase):
@@ -15,15 +16,17 @@ class checkTX(unittest.TestCase):
             id="TX0",
             sync_log_path="test/data/TX0-sync.log",
             sensor_log_path="test/data/TX0-data.log",
-            num_sensors=3,
+            num_sensors=4,
             d_clock=689 * 8 + 8,
         )
 
         # check that the sync messages are sent in a d_clock interval
         diff = []
         for i in range(len(dataSyncerTX.sync_df_raw) - 1):
-            diff.append((dataSyncerTX.sync_df_raw["framesElapsed"].iloc[i + 1] -
-                         dataSyncerTX.sync_df_raw["framesElapsed"].iloc[i]) - dataSyncerTX.d_clock)
+            diff.append(
+                (dataSyncerTX.sync_df_raw["framesElapsed"].iloc[i + 1] -
+                 dataSyncerTX.sync_df_raw["framesElapsed"].iloc[i]) -
+                dataSyncerTX.d_clock)
 
         self.assertEqual(
             np.count_nonzero(diff),
@@ -52,7 +55,8 @@ class checkRX(unittest.TestCase):
                                      num_sensors=4)
         dataSyncerRX2 = DataSyncerRX(
             id="RX2",
-            sync_log_path="test/data/RX2-sync-int.log",  # load tweaked data for interpolation testing
+            # load tweaked data for interpolation testing
+            sync_log_path="test/data/RX2-sync-int.log",
             sensor_log_path="test/data/RX2-data.log",
             num_sensors=4)
 
@@ -78,7 +82,41 @@ class checkRX(unittest.TestCase):
             "RX2 sensor data length is not a multiple of d_clock.")
 
 
-#TODO test error case in which there are more than half of the block missing values in the sensor data
+class checkDataLoader(unittest.TestCase):
+
+    def test_checkDataLoaderShapes(self):
+
+        id = "RX1"
+        num_sensors = 4
+
+        # load sync and sensor data from Bela master (TX)
+        dataSyncerTX = DataSyncerTX(
+            id=id,
+            sync_log_path="test/data/{}-sync.log".format(id),
+            sensor_log_path="test/data/{}-data.log".format(id),
+            num_sensors=num_sensors,
+            d_clock=689 * 8 + 8,
+        )
+
+        # temporary file to store the generated sensor data type
+        test_fn = "test/data-syncer.tmp"
+
+        # save synced data
+        dataSyncerTX.saveSyncedData(test_fn)
+
+        # load synced data
+        sensor_data = SyncedDataLoader(
+            id=id, path=test_fn, num_sensors=num_sensors)
+
+        os.remove(test_fn)
+
+        self.assertEqual(
+            dataSyncerTX.sensor_np.shape == sensor_data.shape, True,
+            "Saved data should be equal to loaded data.",
+        )
+
+
+# TODO test error case in which there are more than half of the block missing values in the sensor data
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
