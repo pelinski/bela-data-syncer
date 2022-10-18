@@ -106,7 +106,7 @@ class checkDataLoader(unittest.TestCase):
 
         # load synced data
         sensor_data = SyncedDataLoader(
-            id=id, path=test_fn, num_sensors=num_sensors).loaded_data
+            id=id, path=test_fn, num_sensors=num_sensors)
 
         os.remove(test_fn)
 
