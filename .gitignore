@@ -9,6 +9,8 @@ __pycache__/
 build/
 dist/
 bela_data_syncer.egg-info/
+data/
+
 
 # dev
 .vscode/
