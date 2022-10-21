@@ -25,8 +25,8 @@ class DataSyncer:
         ]  # datatype for sensor data (necessary for loading binary files)
 
         # Load TX raw data from log files
-        self.__sync_raw = self.__loadBinaryData(self.__sync_log_path, self.__sync_datatype)
-        self.__sensor_raw = self.__loadBinaryData(self.__sensor_log_path, self.__sensor_raw_datatype)
+        self.__sync_raw = self.loadBinaryData(self.__sync_log_path, self.__sync_datatype)
+        self.__sensor_raw = self.loadBinaryData(self.__sensor_log_path, self.__sensor_raw_datatype)
 
         # Load the raw data into pandas dataframes for easier manipulation
         self.__sync_df_raw = pd.DataFrame(self.__sync_raw).astype(int)
@@ -85,13 +85,6 @@ class DataSyncer:
     def verbose(self, value):
         self.__verbose = value
 
-    def __loadBinaryData(self, path, dtype):
-        # Load binary data from log file, given data type
-        if self.verbose: print('Loading "{}"...'.format(path))
-
-        _ = np.fromfile(path, dtype=dtype)
-
-        return _
 
     def __offsetSensorData(self):
         # Remove sensor data recorded before the first and after the last sync message
@@ -99,6 +92,14 @@ class DataSyncer:
                                                sync_df_raw["framesElapsed"].iloc[-1]].copy()
         if self.verbose: print("Offsetting {} sensor data...".format(self.id))
 
+    def loadBinaryData(self, path, dtype):
+        # Load binary data from log file, given data type
+        if self.verbose: print('Loading "{}"...'.format(path))
+
+        _ = np.fromfile(path, dtype=dtype)
+
+        return _
+    
     def plotSensorRaw(self):
         # Plot each sensor raw signal over framesElapsed
         _, ax = plt.subplots()
