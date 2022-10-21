@@ -14,8 +14,8 @@ class test_TX(unittest.TestCase):
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = DataSyncerTX(
             id="TX0",
-            sync_log_path="test/data/TX0-sync.log",
-            sensor_log_path="test/data/TX0-data.log",
+            sync_log_path="test/test-data/TX0-sync.log",
+            sensor_log_path="test/test-data/TX0-data.log",
             num_sensors=4,
             d_clock=689 * 8 + 8,
         )
@@ -42,22 +42,22 @@ class test_RX(unittest.TestCase):
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = DataSyncerTX(
             id="TX0",
-            sync_log_path="test/data/TX0-sync.log",
-            sensor_log_path="test/data/TX0-data.log",
+            sync_log_path="test/test-data/TX0-sync.log",
+            sensor_log_path="test/test-data/TX0-data.log",
             num_sensors=4,
             d_clock=689 * 8 + 8,
         )
 
         # load sync and sensor data from Bela receivers (RX)
         dataSyncerRX1 = DataSyncerRX(id="RX1",
-                                     sync_log_path="test/data/RX1-sync.log",
-                                     sensor_log_path="test/data/RX1-data.log",
+                                     sync_log_path="test/test-data/RX1-sync.log",
+                                     sensor_log_path="test/test-data/RX1-data.log",
                                      num_sensors=4)
         dataSyncerRX2 = DataSyncerRX(
             id="RX2",
             # load tweaked data for interpolation testing
-            sync_log_path="test/data/RX2-sync-int.log",
-            sensor_log_path="test/data/RX2-data.log",
+            sync_log_path="test/test-data/RX2-sync-int.log",
+            sensor_log_path="test/test-data/RX2-data.log",
             num_sensors=4)
 
         # sync sensor data from RXs to TX
@@ -92,8 +92,8 @@ class test_DataLoader(unittest.TestCase):
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = DataSyncerTX(
             id=id,
-            sync_log_path="test/data/{}-sync.log".format(id),
-            sensor_log_path="test/data/{}-data.log".format(id),
+            sync_log_path="test/test-data/{}-sync.log".format(id),
+            sensor_log_path="test/test-data/{}-data.log".format(id),
             num_sensors=num_sensors,
             d_clock=689 * 8 + 8,
         )
@@ -126,7 +126,7 @@ class test_MonoData(unittest.TestCase):
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = Data(
             id=id,
-            sensor_log_path="test/data/mono/{}-data.log".format(id),
+            sensor_log_path="test/test-data/mono/{}-data.log".format(id),
             num_sensors=num_sensors,
         )
 
