@@ -4,18 +4,18 @@ import unittest
 import os
 import numpy as np
 
-from DataSyncer import DataSyncerTX, DataSyncerRX, SyncedDataLoader
+from DataSyncer import DataSyncerTX, DataSyncerRX, Data, SyncedDataLoader
 
 
-class checkTX(unittest.TestCase):
+class test_TX(unittest.TestCase):
 
-    def test_checkTxSyncInterval(self):
+    def test_TxSyncInterval(self):
 
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = DataSyncerTX(
             id="TX0",
-            sync_log_path="test/data/TX0-sync.log",
-            sensor_log_path="test/data/TX0-data.log",
+            sync_log_path="test/test-data/TX0-sync.log",
+            sensor_log_path="test/test-data/TX0-data.log",
             num_sensors=4,
             d_clock=689 * 8 + 8,
         )
@@ -35,29 +35,29 @@ class checkTX(unittest.TestCase):
         )
 
 
-class checkRX(unittest.TestCase):
+class test_RX(unittest.TestCase):
 
-    def test_checkRxLengthInSamples(self):
+    def test_RxLengthInSamples(self):
 
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = DataSyncerTX(
             id="TX0",
-            sync_log_path="test/data/TX0-sync.log",
-            sensor_log_path="test/data/TX0-data.log",
+            sync_log_path="test/test-data/TX0-sync.log",
+            sensor_log_path="test/test-data/TX0-data.log",
             num_sensors=4,
             d_clock=689 * 8 + 8,
         )
 
         # load sync and sensor data from Bela receivers (RX)
         dataSyncerRX1 = DataSyncerRX(id="RX1",
-                                     sync_log_path="test/data/RX1-sync.log",
-                                     sensor_log_path="test/data/RX1-data.log",
+                                     sync_log_path="test/test-data/RX1-sync.log",
+                                     sensor_log_path="test/test-data/RX1-data.log",
                                      num_sensors=4)
         dataSyncerRX2 = DataSyncerRX(
             id="RX2",
             # load tweaked data for interpolation testing
-            sync_log_path="test/data/RX2-sync-int.log",
-            sensor_log_path="test/data/RX2-data.log",
+            sync_log_path="test/test-data/RX2-sync-int.log",
+            sensor_log_path="test/test-data/RX2-data.log",
             num_sensors=4)
 
         # sync sensor data from RXs to TX
@@ -82,9 +82,9 @@ class checkRX(unittest.TestCase):
             "RX2 sensor data length is not a multiple of d_clock.")
 
 
-class checkDataLoader(unittest.TestCase):
+class test_DataLoader(unittest.TestCase):
 
-    def test_checkDataLoaderShapes(self):
+    def test_DataLoaderShapes(self):
 
         id = "RX1"
         num_sensors = 4
@@ -92,8 +92,8 @@ class checkDataLoader(unittest.TestCase):
         # load sync and sensor data from Bela master (TX)
         dataSyncerTX = DataSyncerTX(
             id=id,
-            sync_log_path="test/data/{}-sync.log".format(id),
-            sensor_log_path="test/data/{}-data.log".format(id),
+            sync_log_path="test/test-data/{}-sync.log".format(id),
+            sensor_log_path="test/test-data/{}-data.log".format(id),
             num_sensors=num_sensors,
             d_clock=689 * 8 + 8,
         )
@@ -116,7 +116,39 @@ class checkDataLoader(unittest.TestCase):
         )
 
 
+class test_MonoData(unittest.TestCase):
+
+    def test_DataLoaderShapes(self):
+
+        id = "RX0"
+        num_sensors = 2
+
+        # load sync and sensor data from Bela master (TX)
+        dataSyncerTX = Data(
+            id=id,
+            sensor_log_path="test/test-data/mono/{}-data.log".format(id),
+            num_sensors=num_sensors,
+        )
+
+        # temporary file to store the generated sensor data type
+        test_fn = "test/data-mono.tmp"
+
+        # save synced data
+        dataSyncerTX.saveSyncedData(test_fn)
+
+        # load synced data
+        sensor_data = SyncedDataLoader(
+            id=id, path=test_fn, num_sensors=num_sensors)
+
+        os.remove(test_fn)
+
+        self.assertEqual(
+            dataSyncerTX.sensor_np.shape == sensor_data.shape, True,
+            "Saved data should be equal to loaded data.",
+        )
+
 # TODO test error case in which there are more than half of the block missing values in the sensor data
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
