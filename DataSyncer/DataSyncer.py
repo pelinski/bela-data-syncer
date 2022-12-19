@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 class Data:
     # Data class, parent class for DataSyncerTX and DataSyncerRX
 
-    def __init__(self, id, num_sensors, sensor_log_path,  sync_log_path=None, verbose=True):
+    def __init__(self, id, num_sensors, sensor_log_path,  sync_log_path=None, sample_rate=None, verbose=True):
 
         self.__id = id  # Bela id. TX0 for transmitter/master and RX0, RX1, ... for receivers/slaves
         # number of sensors connected to the Bela analog ports
@@ -16,6 +16,7 @@ class Data:
         self.__sensor_log_path = sensor_log_path  # path to sensor log file
         self.__sync_log_path = sync_log_path  # path to sync log file
         self.__isMulti = False if self.sync_log_path is None else True
+        self.__sample_rate = sample_rate  # analog sample rate of the Bela
         self.__verbose = verbose  # print info messages
 
         self.__sync_datatype = None if not self.__isMulti else [("framesElapsed", "f4"),
@@ -81,6 +82,10 @@ class Data:
     @property
     def sensor_np(self):
         return self.__sensor_df.to_numpy()
+    
+    @property
+    def sample_rate(self):
+        return self.__sample_rate
 
     @property
     def verbose(self):
@@ -108,26 +113,51 @@ class Data:
 
         # framesElapsed is the first item of each row
         framesElapsed = [e[0] for e in self.sensor_raw]
+        
+        if self.sample_rate:
+            timeElapsed = [e / self.sample_rate for e in framesElapsed] # time elapsed
+            x = timeElapsed
+            x_label = "Time Elapsed (s)"
+        else:
+            x = framesElapsed 
+            x_label = "Frames Elapsed"
+
 
         for j in range(1, self.num_sensors + 1):
-            ax.plot(framesElapsed, [
+            ax.plot(x, [
                     e[j] for e in self.sensor_raw], label="{}-x{}".format(self.id, str(j)))
 
         ax.set_title("Raw {} Sensor Data".format(self.id))
-        ax.set_xlabel("Frames Elapsed")
+        ax.set_xlabel(x_label)
 
         ax.legend(loc="upper left")
+        
+        return ax
 
     def plotSensor(self):
-        # Plot each sensor processed signal over framesElapsed
+        
+        # Plot each sensor raw signal over framesElapsed
         _, ax = plt.subplots()
 
-        self.sensor_df.plot(
-            y=[c for c in self.sensor_df.columns if c != "framesElapsed"], ax=ax, use_index=True)
+        # framesElapsed is now the index of each row
+        framesElapsed = np.arange(self.sensor_df.shape[0])
+
+        if self.sample_rate:
+            timeElapsed = [e / self.sample_rate for e in framesElapsed] 
+            x = timeElapsed
+            x_label = "Time Elapsed (s)"
+        else:
+            x = framesElapsed 
+            x_label = "Frames Elapsed"
+
+        ax.plot(x, self.sensor_df, label=self.sensor_df.columns)
+
         ax.set_title("Synced {} Sensor Data".format(self.id))
-        ax.set_xlabel("Frames Elapsed")
+        ax.set_xlabel(x_label)
 
         ax.legend(loc="upper left")
+        
+        return ax
 
     def loadBinaryData(self, path, dtype):
         # Load binary data from log file, given data type
@@ -149,10 +179,10 @@ class Data:
 class DataSyncerTX(Data):
     # DataSyncerTX, class for transmitter/master Bela
 
-    def __init__(self, id, sync_log_path, sensor_log_path, num_sensors, d_clock=689 * 8 + 8, verbose=True):
+    def __init__(self, id, sync_log_path, sensor_log_path, num_sensors, d_clock=689 * 8 + 8, sample_rate=None, verbose=True):
 
         super(DataSyncerTX, self).__init__(
-            id=id, sync_log_path=sync_log_path, sensor_log_path=sensor_log_path, num_sensors=num_sensors, verbose=verbose)
+            id=id, sync_log_path=sync_log_path, sensor_log_path=sensor_log_path, num_sensors=num_sensors, sample_rate=sample_rate,verbose=verbose)
 
         self.__d_clock = d_clock  # interval in frames at which the TX sends a clock signal
 
@@ -169,10 +199,10 @@ class DataSyncerTX(Data):
 class DataSyncerRX(Data):
     # DataSyncerRX, class for receiver/slave Bela
 
-    def __init__(self, id, sync_log_path, sensor_log_path, num_sensors, verbose=True):
+    def __init__(self, id, sync_log_path, sensor_log_path, num_sensors, sample_rate=None, verbose=True):
 
         super(DataSyncerRX, self).__init__(
-            id=id, sync_log_path=sync_log_path, sensor_log_path=sensor_log_path, num_sensors=num_sensors, verbose=verbose)
+            id=id, sync_log_path=sync_log_path, sensor_log_path=sensor_log_path, num_sensors=num_sensors, sample_rate=sample_rate,verbose=verbose)
 
         # whether the receiver has been synced to a transmitter, False or takes string value of transmitter id
         self.__synced_to_id = False
