@@ -1,1 +1,0 @@
-pipenv run python test/test.py

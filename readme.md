@@ -1,20 +1,21 @@
-# bela_data_syncer
+# 2 – Dataset processing (host)
 
-Python library to sync sensor data recorded in various Belas with the [bela-data-logger](https://github.com/pelinski/bela-data-logger) pipeline.
+Once the log files from step 1 have been transferred to the host machine, we can align the signals framewise using the `DataSyncer` library. You can follow the `2-host_data-processing.ipynb` notebook or install the library and incorporate it into your data processing workflow.
 
-## Install
+### Use the notebook:
+In order to use the notebook you will need a python environment with a few packages installed. You can install it using (in the host terminal):
 
+```
+pipenv install
+```
+and you can open the notebook by using:
+```
+pipenv run jupyter notebook
+```
+
+
+### Or install the library
+Alternatively, you can install the library and add it to your data processing workflow:
 ```
 pip install "git+https://github.com/pelinski/bela-data-syncer.git#egg=bela-data-syncer"
 ```
-
-## Development building and testing
-
-```
-git clone https://github.com/pelinski/bela-data-syncer.git
-pipenv install -d
-```
-
-## todo
-
-- throw error if samples to drop are > half of a block + write test for this
